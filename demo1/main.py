@@ -5,6 +5,7 @@ from pdfminer.pdfinterp import PDFResourceManager
 from pdfminer.pdfinterp import PDFPageInterpreter
 from pdfminer.layout import LAParams
 from pdfminer.converter import PDFPageAggregator
+from math import floor
 import pdfminer
 
 def createPDFDoc(fpath):
@@ -42,14 +43,9 @@ def parse_obj(objs):
                     if text not in x0[int(o.y0)][int(o.x0)]:
                         x0[int(o.y0)][int(o.x0)][text] = {}
                     x0[int(o.y0)][int(o.x0)][text]["bbox"] = o.bbox
-                    x0[int(o.y0)][int(o.x0)][text]["height"] = o.height
+                    x0[int(o.y0)][int(o.x0)][text]["height"] = floor(o.height)
                     x0[int(o.y0)][int(o.x0)][text]["width"] = o.width
                     x0[int(o.y0)][int(o.x0)][text]["text"] = o.get_text()
-                        # x0[o.x0]["bbox"].append(o.bbox)
-                        # x0[o.x0]["height"].append(o.height)
-                        # x0[o.x0]["width"].append(o.width)
-                        # x0[o.x0]["text"].append(o.get_text())
-                    # print()
                     # if text.strip():
                     #     for c in  o._objs:
                     #         if isinstance(c, pdfminer.layout.LTChar):
@@ -76,10 +72,29 @@ l, x0 = parse_obj(layout._objs)
 
 d = {}
 
+heights = set()
+based_on_heights = {}
 for k1 in reversed(sorted(x0.keys())):
     d[k1] = {}
     for k2 in sorted(x0[k1].keys()):
         d[k1][k2] = x0[k1][k2]
+        for texts in d[k1][k2].keys():
+            h = floor(d[k1][k2][texts]["height"])
+            heights.add(h)
+            if h not in based_on_heights:
+                based_on_heights[h] = {}
+            if k1 not in based_on_heights[h]:
+                based_on_heights[h][k1] = {}
+            based_on_heights[h][k1][k2] = d[k1][k2]
+
+based_on_heights_d = {}
+for h in reversed(sorted(based_on_heights.keys())):
+    based_on_heights_d[h] = based_on_heights[h]
 
 import json
-print(json.dumps(d, indent=4))
+print(json.dumps(based_on_heights_d, indent=4))
+print(heights)
+
+f = open("temp.json", 'w')
+f.write(json.dumps(based_on_heights_d, indent=4))
+f.close()
