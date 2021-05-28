@@ -39,17 +39,20 @@ def parse_obj(objs):
                     # print(f"height: {o.height}, width:{o.width}, word_margin:{o.word_margin}")
                     text=o.get_text()
                     l.append([o.bbox, o.height, o.width, o.get_text()])
-                    if o.x0 in x0:
-                        x0[o.x0]["bbox"].append(o.bbox)
-                        x0[o.x0]["height"].append(o.height)
-                        x0[o.x0]["width"].append(o.width)
-                        x0[o.x0]["text"].append(o.get_text())
-                    else:
-                        x0[o.x0] = {}
-                        x0[o.x0]["bbox"] = [o.bbox]
-                        x0[o.x0]["height"] = [o.height]
-                        x0[o.x0]["width"] = [o.width]
-                        x0[o.x0]["text"] = [o.get_text()]
+                    if int(o.x0) not in x0:
+                        x0[int(o.x0)] = {}
+                    if int(o.y0) not in x0[int(o.x0)]:
+                        x0[int(o.x0)][int(o.y0)] = {}
+                    if text not in x0[int(o.x0)][int(o.y0)]:
+                        x0[int(o.x0)][int(o.y0)][text] = {}
+                    x0[int(o.x0)][int(o.y0)][text]["bbox"] = o.bbox
+                    x0[int(o.x0)][int(o.y0)][text]["height"] = o.height
+                    x0[int(o.x0)][int(o.y0)][text]["width"] = o.width
+                    x0[int(o.x0)][int(o.y0)][text]["text"] = o.get_text()
+                        # x0[o.x0]["bbox"].append(o.bbox)
+                        # x0[o.x0]["height"].append(o.height)
+                        # x0[o.x0]["width"].append(o.width)
+                        # x0[o.x0]["text"].append(o.get_text())
                     # print()
                     # if text.strip():
                     #     for c in  o._objs:
@@ -77,8 +80,10 @@ l, x0 = parse_obj(layout._objs)
 
 d = {}
 
-for k in sorted(x0.keys()):
-    d[k] = x0[k]
+for k1 in sorted(x0.keys()):
+    d[k1] = {}
+    for k2 in reversed(sorted(x0[k1].keys())):
+        d[k1][k2] = x0[k1][k2]
 
 import json
 print(json.dumps(d, indent=4))
