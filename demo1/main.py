@@ -9,9 +9,9 @@ from math import *
 import pdfminer
 import numpy as np
 import json
+import streamlit as st
  
-def createPDFDoc(fpath):
-    fp = open(fpath, 'rb')
+def createPDFDoc(fp):
     parser = PDFParser(fp)
     document = PDFDocument(parser, password='')
     # Check if the document allows text extraction. If not, abort.
@@ -86,7 +86,6 @@ def parse_obj(objs):
     return l, js
 
 def find_coordinates(d, side_by_side, layout):
-    bboxes = []
     x0, y0, x1, y1 = [], [], [], []
     text = []
     for _y0 in d.keys():
@@ -120,17 +119,10 @@ def find_coordinates(d, side_by_side, layout):
             else:
                 left.append([x0[i], x1[i], y0[i], y0[i]])
                 l_text.append(text[i])
-        
-        # print(f"divider: {divider}")
-        # print(f"left: {left}")
-        # print(f"right: {right}")
-        # print(f"l_text: {l_text}")
-        # print(f"r_text: {r_text}")
-        
+
         left, right = np.array(left), np.array(right)
 
         indices = list(reversed(np.argsort(left[:, 2])))
-        # print(indices)
         for i in range(len(indices)):
             if i == len(indices) - 1: break
             d[l_text[indices[i]]] = {}
@@ -142,7 +134,6 @@ def find_coordinates(d, side_by_side, layout):
             d[t]["x-coord"] = (0, divider)
 
         indices = list(reversed(np.argsort(right[:, 2])))
-        # print(indices)
         for i in range(len(indices)):
             if i == len(indices) - 1: break
             d[r_text[indices[i]]] = {}
@@ -150,18 +141,12 @@ def find_coordinates(d, side_by_side, layout):
         d[r_text[indices[-1]]] = {}
         d[r_text[indices[-1]]]["y-coord"] = (right[indices[-1]][2] - 3, 0)
 
-
         for t in r_text:
             d[t]["x-coord"] = (divider - 5, layout.width)
-            
-        # print(d)
-        
+
     else:
         d = {}
-        # print(f"y0: {y0}")
-        # print(f"text: {text}")
         indices = list(reversed(np.argsort(y0)))
-        # print(indices)
         for i in range(len(indices)):
             if i == len(indices) - 1: break
             d[text[indices[i]]] = {}
@@ -175,7 +160,6 @@ def find_coordinates(d, side_by_side, layout):
     return d
        
 def get_data_within_box(data, properties):
-    # print(properties)
     y_min, y_max = min(properties["y-coord"]), max(properties["y-coord"])
     x_min, x_max = min(properties["x-coord"]), max(properties["x-coord"])
     d = {}
@@ -185,33 +169,25 @@ def get_data_within_box(data, properties):
                 _x0, _y0, _x1, _y1 = data[y0][x0][text]["bbox"]
                 if _y0 > y_min + 1 and _y1 < y_max - 1 and _x0 > x_min + 1 and _x1 < x_max - 1:
                     d[text] = data[y0][x0][text]
-    # print(json.dumps(d, indent=4))
     return d
 
 def get_data(data, coords):
     d = {}
     for k in coords.keys():
-        # print(k)
         d[k] = get_data_within_box(data, coords[k])
-        # print(json.dumps(d[k], indent=4))
-        # d = {**d, **get_data_within_box(data, coords[k])}
     return d
  
 def featch_insighted_at_once(data):
     heights = set()
     for text in data.keys():
-        # print(text)
         heights.add(data[text]["height"])
     height = max(heights)
     
     d = {}
     for text in data.keys():
-        d[text] = data[text]
+        if data[text]["height"] == height:
+            d[text] = data[text]
 
-    # print(json.dumps(d, indent=4))
-
-    # print(d)
-    
     return d
         
     
@@ -219,107 +195,82 @@ def featch_insighted_at_once(data):
 def featch_insighted(data):
     d = {}
     for k in data.keys():
-        # if k == "INVESTOR RELATIONS, FUND STRUCTURING, CONTROLLERSHIP & COMPLIANCE": continue
-        # if k == "EDUCATION": continue
-        # if k == "SKILLS": continue
-        # if k == "PROJECTS": continue
-        # if k == "EXPERIENCE": continue
-        # print(k)
-        # print(data[k])
-        # print()
         d[k] = featch_insighted_at_once(data[k])
-        # print()
-        # print()
-        # print()
-        # break
     return d
 
 
-document = createPDFDoc("../resume-rahul-prajapati.pdf")
-device, interpreter = createDeviceInterpreter()
-pages = PDFPage.create_pages(document)
-interpreter.process_page(next(pages))
-layout = device.get_result()
-l, js = parse_obj(layout._objs)
+# fp = open("../resume-rahul-prajapati.pdf", 'rb')
+fp = st.file_uploader("PDF", ["pdf"])
+if fp is not None:
+    document = createPDFDoc(fp)
+    device, interpreter = createDeviceInterpreter()
+    pages = PDFPage.create_pages(document)
+    interpreter.process_page(next(pages))
+    layout = device.get_result()
+    l, js = parse_obj(layout._objs)
 
-max_widths = None
-for k1 in js.keys():
-    for k2 in js[k1].keys():
-        for text in js[k1][k2].keys():
-            if max_widths is None or max_widths < js[k1][k2][text]["width"]:
-                max_widths = js[k1][k2][text]["width"]
-                # print(text)
-# print(max_widths)
+    max_widths = None
+    for k1 in js.keys():
+        for k2 in js[k1].keys():
+            for text in js[k1][k2].keys():
+                if max_widths is None or max_widths < js[k1][k2][text]["width"]:
+                    max_widths = js[k1][k2][text]["width"]
 
-side_by_side = False
-if max_widths < layout.width * 0.75:
-    side_by_side = True
+    side_by_side = False
+    if max_widths < layout.width * 0.75:
+        side_by_side = True
 
-# print(f"side_by_side: {side_by_side}")
+    d = {}
 
-d = {}
+    f_heights = set()
+    based_on_heights = {}
+    for k1 in reversed(sorted(js.keys())):
+        d[k1] = {}
+        for k2 in sorted(js[k1].keys()):
+            d[k1][k2] = js[k1][k2]
+            for texts in d[k1][k2].keys():
+                h = floor(d[k1][k2][texts]["height"])
+                f_heights.add(h)
+                if h not in based_on_heights:
+                    based_on_heights[h] = {}
+                if k1 not in based_on_heights[h]:
+                    based_on_heights[h][k1] = {}
+                based_on_heights[h][k1][k2] = d[k1][k2]
 
-f_heights = set()
-based_on_heights = {}
-for k1 in reversed(sorted(js.keys())):
-    d[k1] = {}
-    for k2 in sorted(js[k1].keys()):
-        d[k1][k2] = js[k1][k2]
-        for texts in d[k1][k2].keys():
-            h = floor(d[k1][k2][texts]["height"])
-            f_heights.add(h)
-            if h not in based_on_heights:
-                based_on_heights[h] = {}
-            if k1 not in based_on_heights[h]:
-                based_on_heights[h][k1] = {}
-            based_on_heights[h][k1][k2] = d[k1][k2]
+    f_heights = list(reversed(sorted(f_heights)))
 
-f_heights = list(reversed(sorted(f_heights)))
+    name = based_on_heights[f_heights[0]]
+    special_features = {}
+    features = based_on_heights[f_heights[1]]
+    if len(features) == 1:
+        special_features = features
+        features = based_on_heights[f_heights[2]]
+    coords = find_coordinates({**special_features, **features}, side_by_side, layout)
+    segmented_data = get_data(d, coords)
+    data = featch_insighted(segmented_data)
 
-name = based_on_heights[f_heights[0]]
-special_features = {}
-features = based_on_heights[f_heights[1]]
-if len(features) == 1:
-    special_features = features
-    features = based_on_heights[f_heights[2]]
-coords = find_coordinates({**special_features, **features}, side_by_side, layout)
+    d = {}
+    for k in data:
+        d[k] = []
+        for text in data[k]:
+            d[k].append(text)
 
+    st.write(d)
+    # print(json.dumps(d, indent=4))
 
-segmented_data = get_data(d, coords)
-# print(json.dumps(segmented_data, indent=4))
-
-data = featch_insighted(segmented_data)
-
-d = {}
-for k in data:
-    d[k] = []
-    # print(k)
-    for text in data[k]:
-        # print(f"\t {text}")
-        d[k].append(text)
-print(json.dumps(d, indent=4))
-
-# for y0 in based_on_heights[f_heights[1]].keys():
-#     for x0 in based_on_heights[f_heights[1]][y0].keys():
-#         for text in based_on_heights[f_heights[1]][y0][x0].keys():
-#             print(text)
-
-based_on_heights_d = {}
-for h in reversed(sorted(based_on_heights.keys())):
-    based_on_heights_d[h] = based_on_heights[h]
-
-# print(json.dumps(based_on_heights_d, indent=4))
-# print(f_heights)
-
-f = open("temp.json", 'w')
-f.write(json.dumps(d, indent=4))
-f.close()
-
-f = open("based_on_heights.json", 'w')
-f.write(json.dumps(based_on_heights_d, indent=4))
-f.close()
-
-f = open("segmented_data.json", 'w')
-f.write(json.dumps(segmented_data, indent=4))
-f.close()
-
+    # based_on_heights_d = {}
+    # for h in reversed(sorted(based_on_heights.keys())):
+    #     based_on_heights_d[h] = based_on_heights[h]
+    #
+    # f = open("temp.json", 'w')
+    # f.write(json.dumps(d, indent=4))
+    # f.close()
+    #
+    # f = open("based_on_heights.json", 'w')
+    # f.write(json.dumps(based_on_heights_d, indent=4))
+    # f.close()
+    #
+    # f = open("segmented_data.json", 'w')
+    # f.write(json.dumps(segmented_data, indent=4))
+    # f.close()
+    #
