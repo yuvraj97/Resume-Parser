@@ -99,12 +99,12 @@ def find_coordinates(d, side_by_side, layout):
                 text.append(_text)
                 # bboxes.append((d[_y0][_x0][text]["bbox"], text))
     # x0, y0, x1, y1 = np.array(x0), np.array(y0), np.array(x1), np.array(y1)
-    print()
-    print()
-    print(x0)
-    print(y0)
-    print(x1)
-    print(y1)
+    # print()
+    # print()
+    # print(x0)
+    # print(y0)
+    # print(x1)
+    # print(y1)
     
     if side_by_side:
         
@@ -128,8 +128,8 @@ def find_coordinates(d, side_by_side, layout):
         
         left, right = np.array(left), np.array(right)
 
-        print(left)
-        print(right)
+        # print(left)
+        # print(right)
 
         if len(left) != 0:
             indices = list(reversed(np.argsort(left[:, 2])))
@@ -155,7 +155,7 @@ def find_coordinates(d, side_by_side, layout):
             for t in r_text:
                 d[t]["x-coord"] = (divider - 5, layout.width)
         
-        print(d)
+        # print(d)
 
     else:
         d = {}
@@ -256,17 +256,17 @@ if fp is not None:
                     based_on_heights[h][k1] = {}
                 based_on_heights[h][k1][k2] = d[k1][k2]
 
-    f = open("whole_pdf.json", 'w')
-    f.write(json.dumps(js, indent=4))
-    f.close()
+    # f = open("whole_pdf.json", 'w')
+    # f.write(json.dumps(js, indent=4))
+    # f.close()
 
     based_on_heights_d = {}
     for h in reversed(sorted(based_on_heights.keys())):
         based_on_heights_d[h] = based_on_heights[h]
 
-    f = open("based_on_heights.json", 'w')
-    f.write(json.dumps(based_on_heights_d, indent=4))
-    f.close()
+    # f = open("based_on_heights.json", 'w')
+    # f.write(json.dumps(based_on_heights_d, indent=4))
+    # f.close()
 
     f_heights = list(reversed(sorted(f_heights)))
 
@@ -281,16 +281,16 @@ if fp is not None:
     print(f"side_by_side: {side_by_side}")
     print(f"f_heights: {f_heights}")
 
-    f = open("features.json", 'w')
-    f.write(json.dumps({**special_features, **features}, indent=4))
-    f.close()
+    # f = open("features.json", 'w')
+    # f.write(json.dumps({**special_features, **features}, indent=4))
+    # f.close()
 
     coords = find_coordinates({**special_features, **features}, side_by_side, layout)
     segmented_data = get_data(d, coords)
 
-    f = open("segmented_data.json", 'w')
-    f.write(json.dumps(segmented_data, indent=4))
-    f.close()
+    # f = open("segmented_data.json", 'w')
+    # f.write(json.dumps(segmented_data, indent=4))
+    # f.close()
 
     data = featch_insighted(segmented_data)
 
@@ -301,9 +301,9 @@ if fp is not None:
             d[k].append(text)
 
     st.write(d)
-    print(json.dumps(d, indent=4))
+    # print(json.dumps(d, indent=4))
 
-    f = open("result.json", 'w')
-    f.write(json.dumps(d, indent=4))
-    f.close()
+    # f = open("result.json", 'w')
+    # f.write(json.dumps(d, indent=4))
+    # f.close()
 
