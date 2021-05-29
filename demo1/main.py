@@ -99,7 +99,13 @@ def find_coordinates(d, side_by_side, layout):
                 text.append(_text)
                 # bboxes.append((d[_y0][_x0][text]["bbox"], text))
     # x0, y0, x1, y1 = np.array(x0), np.array(y0), np.array(x1), np.array(y1)
-        
+    print()
+    print()
+    print(x0)
+    print(y0)
+    print(x1)
+    print(y1)
+    
     if side_by_side:
         
         d = {}
@@ -111,7 +117,7 @@ def find_coordinates(d, side_by_side, layout):
         
         divider = None
         for i, _x0 in enumerate(x0):
-            if _x0 > layout.width/2:
+            if _x0 > layout.width * 0.25:
                 if divider is None or _x0 < divider:
                     divider = _x0
                 right.append([x0[i], x1[i], y0[i], y0[i]])
@@ -119,30 +125,37 @@ def find_coordinates(d, side_by_side, layout):
             else:
                 left.append([x0[i], x1[i], y0[i], y0[i]])
                 l_text.append(text[i])
-
+        
         left, right = np.array(left), np.array(right)
 
-        indices = list(reversed(np.argsort(left[:, 2])))
-        for i in range(len(indices)):
-            if i == len(indices) - 1: break
-            d[l_text[indices[i]]] = {}
-            d[l_text[indices[i]]]["y-coord"] = (left[indices[i]][2] - 3, left[indices[i+1]][2] + 3)
-        d[l_text[indices[-1]]] = {}
-        d[l_text[indices[-1]]]["y-coord"] = (left[indices[-1]][2] - 3, 0)
+        print(left)
+        print(right)
 
-        for t in l_text:
-            d[t]["x-coord"] = (0, divider)
+        if len(left) != 0:
+            indices = list(reversed(np.argsort(left[:, 2])))
+            for i in range(len(indices)):
+                if i == len(indices) - 1: break
+                d[l_text[indices[i]]] = {}
+                d[l_text[indices[i]]]["y-coord"] = (left[indices[i]][2] - 3, left[indices[i+1]][2] + 3)
+            d[l_text[indices[-1]]] = {}
+            d[l_text[indices[-1]]]["y-coord"] = (left[indices[-1]][2] - 3, 0)
+    
+            for t in l_text:
+                d[t]["x-coord"] = (0, divider)
 
-        indices = list(reversed(np.argsort(right[:, 2])))
-        for i in range(len(indices)):
-            if i == len(indices) - 1: break
-            d[r_text[indices[i]]] = {}
-            d[r_text[indices[i]]]["y-coord"] = (right[indices[i]][2] - 3, right[indices[i+1]][2] + 3)
-        d[r_text[indices[-1]]] = {}
-        d[r_text[indices[-1]]]["y-coord"] = (right[indices[-1]][2] - 3, 0)
-
-        for t in r_text:
-            d[t]["x-coord"] = (divider - 5, layout.width)
+        if len(right) != 0:
+            indices = list(reversed(np.argsort(right[:, 2])))
+            for i in range(len(indices)):
+                if i == len(indices) - 1: break
+                d[r_text[indices[i]]] = {}
+                d[r_text[indices[i]]]["y-coord"] = (right[indices[i]][2] - 3, right[indices[i+1]][2] + 3)
+            d[r_text[indices[-1]]] = {}
+            d[r_text[indices[-1]]]["y-coord"] = (right[indices[-1]][2] - 3, 0)
+    
+            for t in r_text:
+                d[t]["x-coord"] = (divider - 5, layout.width)
+        
+        print(d)
 
     else:
         d = {}
@@ -178,6 +191,11 @@ def get_data(data, coords):
     return d
  
 def featch_insighted_at_once(data):
+    # print()
+    # print()
+    # print("featch_insighted_at_once")
+    # print(json.dumps(data, indent=4))
+    # print()
     heights = set()
     for text in data.keys():
         heights.add(data[text]["height"])
@@ -195,11 +213,12 @@ def featch_insighted_at_once(data):
 def featch_insighted(data):
     d = {}
     for k in data.keys():
+        if data[k] == {}: continue
         d[k] = featch_insighted_at_once(data[k])
     return d
 
 
-# fp = open("../resume-rahul-prajapati.pdf", 'rb')
+# fp = open("../PDFs/modern.pdf", 'rb')
 fp = st.file_uploader("PDF", ["pdf"])
 if fp is not None:
     document = createPDFDoc(fp)
@@ -217,7 +236,7 @@ if fp is not None:
                     max_widths = js[k1][k2][text]["width"]
 
     side_by_side = False
-    if max_widths < layout.width * 0.75:
+    if max_widths < layout.width * 0.65:
         side_by_side = True
 
     d = {}
@@ -237,6 +256,18 @@ if fp is not None:
                     based_on_heights[h][k1] = {}
                 based_on_heights[h][k1][k2] = d[k1][k2]
 
+    f = open("whole_pdf.json", 'w')
+    f.write(json.dumps(js, indent=4))
+    f.close()
+
+    based_on_heights_d = {}
+    for h in reversed(sorted(based_on_heights.keys())):
+        based_on_heights_d[h] = based_on_heights[h]
+
+    f = open("based_on_heights.json", 'w')
+    f.write(json.dumps(based_on_heights_d, indent=4))
+    f.close()
+
     f_heights = list(reversed(sorted(f_heights)))
 
     name = based_on_heights[f_heights[0]]
@@ -245,8 +276,22 @@ if fp is not None:
     if len(features) == 1:
         special_features = features
         features = based_on_heights[f_heights[2]]
+        
+    print(f"max_widths: {max_widths}")
+    print(f"side_by_side: {side_by_side}")
+    print(f"f_heights: {f_heights}")
+
+    f = open("features.json", 'w')
+    f.write(json.dumps({**special_features, **features}, indent=4))
+    f.close()
+
     coords = find_coordinates({**special_features, **features}, side_by_side, layout)
     segmented_data = get_data(d, coords)
+
+    f = open("segmented_data.json", 'w')
+    f.write(json.dumps(segmented_data, indent=4))
+    f.close()
+
     data = featch_insighted(segmented_data)
 
     d = {}
@@ -256,21 +301,9 @@ if fp is not None:
             d[k].append(text)
 
     st.write(d)
-    # print(json.dumps(d, indent=4))
+    print(json.dumps(d, indent=4))
 
-    # based_on_heights_d = {}
-    # for h in reversed(sorted(based_on_heights.keys())):
-    #     based_on_heights_d[h] = based_on_heights[h]
-    #
-    # f = open("temp.json", 'w')
-    # f.write(json.dumps(d, indent=4))
-    # f.close()
-    #
-    # f = open("based_on_heights.json", 'w')
-    # f.write(json.dumps(based_on_heights_d, indent=4))
-    # f.close()
-    #
-    # f = open("segmented_data.json", 'w')
-    # f.write(json.dumps(segmented_data, indent=4))
-    # f.close()
-    #
+    f = open("result.json", 'w')
+    f.write(json.dumps(d, indent=4))
+    f.close()
+
